@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "WebFetch(domain:www.nocobase.com)",
+      "WebFetch(domain:github.com)"
+    ],
+    "additionalDirectories": [
+      "/Users/hezuodong/.agents/skills"
+    ]
+  }
+}
