@@ -1,0 +1,273 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.prisma.io/docs/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// Workspace & Auth
+// ============================================
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free") // free | pro | team | enterprise
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members   WorkspaceMember[]
+  tables    Table[]
+  agents    Agent[]
+  workflows Workflow[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  emailVerified Boolean   @default(false)
+  password      String?   // For email/password auth (hashed)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  memberships   WorkspaceMember[]
+  agentSessions AgentSession[]
+}
+
+// ============================================
+// Auth (better-auth)
+// ============================================
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// ============================================
+// Workspace Members (Permission Model)
+// ============================================
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   @default("member") // owner | admin | member | viewer
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+// ============================================
+// Database Schema (Tables, Fields, Relations)
+// ============================================
+
+model Table {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  description String?
+  isView      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fields    Field[]
+  relations TableRelation[] @relation("SourceTable")
+  relatedTo TableRelation[] @relation("TargetTable")
+  records   Record[]
+
+  @@unique([workspaceId, slug])
+}
+
+model Field {
+  id        String   @id @default(cuid())
+  tableId   String
+  name      String
+  slug      String
+  type      String   // text | number | boolean | date | email | url | json | relation | select | multiselect
+  options   Json?    // for select/multiselect: { choices: string[] }
+  isPrimary Boolean  @default(false)
+  isRequired Boolean @default(false)
+  isUnique   Boolean  @default(false)
+  defaultValue String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, slug])
+}
+
+model TableRelation {
+  id           String   @id @default(cuid())
+  sourceTableId String
+  targetTableId String
+  relationType String   // one-to-one | one-to-many | many-to-many
+  sourceField  String   // field name on source table (store as foreign key)
+  targetField  String   // field name on target table
+  createdAt    DateTime @default(now())
+
+  sourceTable Table @relation("SourceTable", fields: [sourceTableId], references: [id], onDelete: Cascade)
+  targetTable Table @relation("TargetTable", fields: [targetTableId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceTableId, sourceField])
+}
+
+// ============================================
+// Records
+// ============================================
+
+model Record {
+  id        String   @id @default(cuid())
+  tableId   String
+  data      Json     // all field values stored as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId])
+}
+
+// ============================================
+// Agent System
+// ============================================
+
+model Agent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  description String?
+  type        String   @default("custom") // data-analyst | customer-research | report-generator | custom
+  config      Json     // { systemPrompt, tools: [], memory: boolean }
+  isPublic    Boolean  @default(false) // available to all workspace members
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessions     AgentSession[]
+  executions   AgentExecution[]
+
+  @@unique([workspaceId, slug])
+}
+
+model AgentSession {
+  id        String   @id @default(cuid())
+  agentId   String
+  userId    String
+  messages  Json     // { role: 'user' | 'assistant', content: string, timestamp: number }[]
+  metadata  Json?    // { tableContext?, recordContext? }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([userId])
+}
+
+model AgentExecution {
+  id        String   @id @default(cuid())
+  agentId   String
+  sessionId String?
+  status    String   // pending | running | completed | failed
+  input     Json     // { query, context? }
+  output    Json?    // { result, sql?, error? }
+  duration  Int?     // ms
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+// ============================================
+// Workflows (v2 — deferred)
+// ============================================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  description String?
+  triggerType String   @default("chat") // chat | schedule | webhook | record
+  triggerConfig Json  // cron expression, webhook URL, or table/field filter
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  steps     WorkflowStep[]
+
+  @@unique([workspaceId, slug])
+}
+
+model WorkflowStep {
+  id          String   @id @default(cuid())
+  workflowId  String
+  name        String
+  order       Int
+  type        String   // agent | http | filter | transform
+  config      Json     // { agentId?, url?, filter?, transformType? }
+  createdAt   DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+}

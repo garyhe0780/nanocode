@@ -1,12 +1,24 @@
 {
   "name": "nanodb",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter='./apps/*' dev",
+    "dev:api": "bun --cwd apps/api dev",
+    "dev:web": "bun --cwd apps/web dev",
+    "dev:agent": "bun --cwd apps/agent-runtime dev",
+    "build": "bun run --filter='./apps/*' build",
+    "db:generate": "bun --cwd packages/db generate",
+    "db:push": "bun --cwd packages/db push",
+    "db:migrate": "bun --cwd packages/db migrate",
+    "db:studio": "bun --cwd packages/db studio"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "devDependencies": {
+    "@types/bun": "latest",
+    "dotenv": "^17.3.1",
+    "typescript": "^6.0.1-rc"
   }
 }

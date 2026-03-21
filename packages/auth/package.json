@@ -1,0 +1,15 @@
+{
+  "name": "@nanodb/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "better-auth": "^1.5.5",
+    "@better-auth/prisma-adapter": "^1.5.5",
+    "@nanodb/db": "workspace:*"
+  }
+}

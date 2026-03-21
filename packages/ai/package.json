@@ -1,0 +1,16 @@
+{
+  "name": "@nanodb/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "openai": "^4.73.0",
+    "@nanodb/db": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}
