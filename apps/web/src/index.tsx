@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { QueryProvider } from './lib/query-provider';
 import { App } from './app';
 import './styles.css';
 
@@ -9,4 +10,8 @@ if (!rootElement) {
 }
 
 const root = createRoot(rootElement);
-root.render(<App />);
+root.render(
+  <QueryProvider>
+    <App />
+  </QueryProvider>
+);

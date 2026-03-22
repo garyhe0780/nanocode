@@ -1,6 +1,6 @@
 import webApp from "./index.html";
 
-const PORT = 3002;
+const PORT = Number(process.env.PORT || "3002");
 
 const server = Bun.serve({
   port: PORT,

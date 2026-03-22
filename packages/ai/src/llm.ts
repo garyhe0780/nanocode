@@ -7,10 +7,8 @@ export interface LLMConfig {
   provider: LLMProvider;
   apiKey: string;
   model?: string;
+  baseURL?: string;
 }
-
-const anthropic = new Anthropic();
-const openai = new OpenAI();
 
 export async function createLLMMessage(
   config: LLMConfig,
@@ -23,6 +21,10 @@ export async function createLLMMessage(
   const { systemPrompt, userMessage, maxTokens = 4096 } = params;
 
   if (config.provider === 'anthropic') {
+    const anthropic = new Anthropic({
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
+    });
     const response = await anthropic.messages.create({
       model: config.model ?? 'claude-3-5-sonnet-20241022',
       max_tokens: maxTokens,
@@ -33,6 +35,10 @@ export async function createLLMMessage(
   }
 
   if (config.provider === 'openai') {
+    const openai = new OpenAI({
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
+    });
     const response = await openai.chat.completions.create({
       model: config.model ?? 'gpt-4o',
       max_tokens: maxTokens,

@@ -30,7 +30,19 @@
       "Bash(DATABASE_URL=\"postgresql://hezuodong@localhost:5432/nanodb?schema=public\" BETTER_AUTH_SECRET=\"test-secret-key-at-least-32-chars-long\" BETTER_AUTH_URL=\"http://localhost:3000\" bun test apps/api/src/auth.test.ts 2>&1)",
       "Bash(DATABASE_URL=\"postgresql://hezuodong@localhost:5432/nanodb?schema=public\" BETTER_AUTH_SECRET=\"test-secret-key-at-least-32-chars-long\" BETTER_AUTH_URL=\"http://localhost:3000\" bun test apps/api/src/auth.test.ts)",
       "Bash(node:*)",
-      "Bash(TABLE_ID=\"cmmztexqr0002hlia6yuotslo\" curl -s -X POST http://localhost:3000/api/tables/$TABLE_ID/records -H \"Content-Type: application/json\" -H \"x-workspace-slug: my-workspace\" -b /tmp/test_cookies.txt -d '{\"\"\"\"data\"\"\"\":{\"\"\"\"name\"\"\"\":\"\"\"\"John Doe\"\"\"\",\"\"\"\"email\"\"\"\":\"\"\"\"john@example.com\"\"\"\"}}')"
+      "Bash(TABLE_ID=\"cmmztexqr0002hlia6yuotslo\" curl -s -X POST http://localhost:3000/api/tables/$TABLE_ID/records -H \"Content-Type: application/json\" -H \"x-workspace-slug: my-workspace\" -b /tmp/test_cookies.txt -d '{\"\"\"\"data\"\"\"\":{\"\"\"\"name\"\"\"\":\"\"\"\"John Doe\"\"\"\",\"\"\"\"email\"\"\"\":\"\"\"\"john@example.com\"\"\"\"}}')",
+      "Bash(sleep 1 DATABASE_URL=postgresql://hezuodong@localhost:5432/nanodb?schema=public BETTER_AUTH_SECRET=test-secret-key-at-least-32-chars-long BETTER_AUTH_URL=http://localhost:3000 bun run --hot apps/api/src/index.ts)",
+      "Bash(lsof -i:3002)",
+      "Bash(lsof -ti:3000 -ti:3002 -ti:3001)",
+      "Bash(lsof:*)",
+      "WebFetch(domain:npmx.dev)",
+      "WebSearch",
+      "Bash(bun build:*)",
+      "Bash(ls:*)",
+      "Bash(bun pm:*)",
+      "Bash(rm -rf apps/web/node_modules/.bun)",
+      "Bash(rm -f apps/web/bun.lockb)",
+      "Bash(npm install:*)"
     ],
     "additionalDirectories": [
       "/Users/hezuodong/.agents/skills"

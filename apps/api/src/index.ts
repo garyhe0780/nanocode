@@ -1,5 +1,10 @@
 import { auth } from '@nanodb/auth';
 import { prisma } from '@nanodb/db';
+import { queryDataAnalyst, dbQueryTool } from '@nanodb/ai';
+import { registerTool } from '@nanodb/ai';
+
+// Register tools
+registerTool(dbQueryTool);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -353,22 +358,66 @@ const routes = {
           context?: { tableId?: string; tableName?: string };
         };
 
-        // TODO: Implement agent query with LLM
-        return Response.json({
-          message: 'Agent query processed',
-          query,
-          agentId,
-          context,
+        // Get LLM config from environment
+        // DeepSeek uses OpenAI-compatible API, so we use openai provider
+        const baseURL = process.env.ANTHROPIC_BASE_URL || '';
+        const isDeepSeek = baseURL.includes('deepseek');
+        const llmConfig = {
+          provider: (isDeepSeek ? 'openai' : 'anthropic') as 'anthropic' | 'openai',
+          apiKey: process.env.ANTHROPIC_API_KEY || '',
+          baseURL: baseURL || undefined,
+          model: process.env.ANTHROPIC_MODEL || (isDeepSeek ? 'deepseek-chat' : 'claude-3-5-sonnet-20241022'),
+        };
+
+        if (!llmConfig.apiKey) {
+          return Response.json({
+            error: 'LLM not configured. Please set ANTHROPIC_API_KEY environment variable.',
+          }, { status: 500 });
+        }
+
+        const result = await queryDataAnalyst(query, {
+          llm: llmConfig,
+          workspaceId,
+          userId: _userId, // The user's ID from the session
         });
+
+        return Response.json(result);
       });
     },
   },
 };
 
+// CORS headers for cross-origin requests
+const CORS_ALLOWED_ORIGINS = ['http://localhost:3002', 'http://localhost:3000'];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && CORS_ALLOWED_ORIGINS.includes(origin) ? origin : CORS_ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, X-Workspace-Slug',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
+// Preflight handler
+function handleCorsPreflight(req: Request): Response {
+  const origin = req.headers.get('origin');
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(origin),
+  });
+}
+
 // Fallback for unmatched routes
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return handleCorsPreflight(req);
+  }
 
   // Check if path matches a route (handles parameterized routes like /api/tables/:id)
   function matchRoute(pathname: string, pattern: string): boolean {
@@ -406,8 +455,22 @@ async function handleRequest(req: Request): Promise<Response> {
 
 Bun.serve({
   port: PORT,
-  fetch(req) {
-    return handleRequest(req);
+  async fetch(req) {
+    const response = await handleRequest(req);
+    // Add CORS headers to all responses
+    const origin = req.headers.get('origin');
+    const corsHeaders = getCorsHeaders(origin);
+    if (response.headers.get('Access-Control-Allow-Origin')) {
+      return response; // Response already has CORS headers (e.g., from better-auth)
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        ...corsHeaders,
+      },
+    });
   },
   websocket: {
     open(ws) {
